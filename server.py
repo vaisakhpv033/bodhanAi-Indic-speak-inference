@@ -95,6 +95,15 @@ class IndicSpeakEngine:
         from transformers import AutoModelForCausalLM, AutoTokenizer
         from snac import SNAC
 
+        # 0. Hardware Accelerations for NVIDIA RTX 4090 / Ampere / Ada Lovelace
+        if self.device == "cuda" and torch.cuda.is_available():
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+            torch.backends.cudnn.benchmark = True
+            if hasattr(torch, "set_float32_matmul_precision"):
+                torch.set_float32_matmul_precision("high")
+            logger.info("Hardware accelerations enabled: TF32=ON, cuDNN Benchmark=ON")
+
         # 1. Tokenizer
         logger.info("Loading Tokenizer...")
         self.tok = AutoTokenizer.from_pretrained(self.model_id)
@@ -103,7 +112,7 @@ class IndicSpeakEngine:
         logger.info("Loading Llama-3.2-3B Causal LM (bfloat16, SDPA)...")
         self.lm = AutoModelForCausalLM.from_pretrained(
             self.model_id,
-            torch_dtype=torch.bfloat16,
+            dtype=torch.bfloat16,
             attn_implementation="sdpa" if self.device == "cuda" else "eager",
         ).to(self.device).eval()
 
@@ -210,6 +219,18 @@ class IndicSpeakEngine:
         pcm_16 = (audio_arr * 32767.0).astype(np.int16).tobytes()
         return pcm_16
 
+    @staticmethod
+    def estimate_max_tokens(text: str, default_max: int = 2520) -> int:
+        """
+        Dynamically calculates an intelligent token limit based on input text length.
+        Speech in Indian languages averages ~2.5 words/sec, and 1 sec = 7 tokens * 13.5 frames = ~95 tokens.
+        A 1.6x safety multiplier ensures sentences are never truncated while preventing runaway GPU waste.
+        """
+        words = max(1, len(text.strip().split()))
+        estimated_sec = max(2.5, (words / 2.2) * 1.6)
+        estimated_tokens = int(estimated_sec * 95)
+        return min(default_max, max(280, estimated_tokens))
+
     def synthesize_full(
         self,
         text: str,
@@ -221,16 +242,22 @@ class IndicSpeakEngine:
         max_new_tokens: int = 2520,
     ) -> np.ndarray:
         """Synthesize a complete utterance into a 24kHz float32 numpy array."""
+        effective_max_tokens = (
+            self.estimate_max_tokens(text, default_max=max_new_tokens)
+            if max_new_tokens == 2520
+            else max_new_tokens
+        )
         prompt_ids = self.build_prompt_ids(text, speaker, style)
-        input_tensor = torch.tensor([prompt_ids], device=self.device)
+        input_tensor = torch.tensor([prompt_ids], device=self.device, dtype=torch.long)
 
         with torch.no_grad():
             gen = self.lm.generate(
                 input_ids=input_tensor,
                 attention_mask=torch.ones_like(input_tensor),
-                max_new_tokens=max_new_tokens,
+                max_new_tokens=effective_max_tokens,
                 eos_token_id=[self._eos, self.tok.eos_token_id],
                 pad_token_id=self.tok.eos_token_id,
+                use_cache=True,
                 do_sample=temperature > 0,
                 temperature=temperature,
                 top_p=top_p,
@@ -260,8 +287,13 @@ class IndicSpeakEngine:
         as frames are emitted by the autoregressive LM.
         """
         async with self.semaphore:
+            effective_max_tokens = (
+                self.estimate_max_tokens(text, default_max=max_new_tokens)
+                if max_new_tokens == 2520
+                else max_new_tokens
+            )
             prompt_ids = self.build_prompt_ids(text, speaker, style)
-            input_tensor = torch.tensor([prompt_ids], device=self.device)
+            input_tensor = torch.tensor([prompt_ids], device=self.device, dtype=torch.long)
 
             token_buffer: list[int] = []
             tokens_per_chunk = STREAM_CHUNK_FRAMES * NUM_CODEBOOKS  # e.g., 4 * 7 = 28 tokens
@@ -290,9 +322,10 @@ class IndicSpeakEngine:
                     self.lm.generate(
                         input_ids=input_tensor,
                         attention_mask=torch.ones_like(input_tensor),
-                        max_new_tokens=max_new_tokens,
+                        max_new_tokens=effective_max_tokens,
                         eos_token_id=[self._eos, self.tok.eos_token_id],
                         pad_token_id=self.tok.eos_token_id,
+                        use_cache=True,
                         do_sample=temperature > 0,
                         temperature=temperature,
                         top_p=top_p,

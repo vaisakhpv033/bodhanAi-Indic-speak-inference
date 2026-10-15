@@ -56,7 +56,8 @@ def check_health(base_url: str):
             print("[+] Server is HEALTHY and READY!")
             print(f"    - Model:    {data.get('model')}")
             print(f"    - Device:   {data.get('device')} ({data.get('gpu_name', 'N/A')})")
-            print(f"    - VRAM:     {data.get('gpu_memory_allocated_gb', 'N/A')} GB allocated")
+            vram = data.get('vram_allocated_gb', data.get('gpu_memory_allocated_gb', 'N/A'))
+            print(f"    - VRAM:     {vram} GB allocated")
             print(f"    - Voices:   {data.get('supported_voices')} studio speakers")
             print(f"    - Langs:    {data.get('supported_languages')} Indic languages")
             return True
