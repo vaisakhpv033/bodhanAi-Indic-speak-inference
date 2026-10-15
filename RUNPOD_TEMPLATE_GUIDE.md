@@ -35,7 +35,7 @@ You can use either **Strategy A (GitHub Auto-Pull & Launch — Recommended)**, *
 Push this folder to a GitHub repository, then paste this command into the RunPod Template **Docker Start Command** field:
 
 ```bash
-bash -c "mkdir -p /workspace && cd /workspace && if [ ! -d 'indicspeak' ]; then git clone https://github.com/<YOUR_GITHUB_USERNAME>/<YOUR_REPO_NAME>.git indicspeak; else cd indicspeak && git pull; fi && cd /workspace/indicspeak && chmod +x runpod_start.sh && bash runpod_start.sh || sleep infinity"
+bash -c 'if [ ! -d "/workspace/indicspeak" ]; then git clone https://github.com/vaisakhpv033/bodhanAi-Indic-speak-inference.git /workspace/indicspeak; else cd /workspace/indicspeak && git pull; fi && cd /workspace/indicspeak && bash runpod_start.sh || sleep infinity'
 ```
 *(For private GitHub repositories, replace the URL with: `https://$GITHUB_TOKEN@github.com/<USERNAME>/<REPO>.git` and add `GITHUB_TOKEN` to Environment Variables).*
 
