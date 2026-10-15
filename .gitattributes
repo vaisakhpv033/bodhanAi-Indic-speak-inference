@@ -1,0 +1,15 @@
+# Ensure shell scripts and Dockerfiles always keep LF line endings
+# Critical for Linux RunPod containers and automated startup scripts
+*.sh text eol=lf
+Dockerfile text eol=lf
+
+# Python files with LF
+*.py text eol=lf
+
+# General documentation and configuration
+*.md text
+*.yml text
+*.yaml text
+*.json text
+.gitignore text
+.env.example text

@@ -1,0 +1,98 @@
+# ==============================================================================
+# Indic-Speak Git Ignore Rules
+# Protects sensitive secrets, credentials, test audios, model caches, and local artifacts
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Environment Variables & Secrets (CRITICAL: NEVER COMMIT REAL HF_TOKEN)
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pkcs12
+*.pfx
+id_rsa*
+id_ed25519*
+secrets/
+
+# ------------------------------------------------------------------------------
+# 2. Generated Audio, Benchmark Samples & Media Artifacts
+# ------------------------------------------------------------------------------
+*.wav
+*.mp3
+*.pcm
+*.raw
+*.ogg
+*.flac
+*.aac
+*.m4a
+generated_audios/
+audio_output/
+test_outputs/
+recordings/
+benchmark_results*.json
+
+# ------------------------------------------------------------------------------
+# 3. Model Weight Caches & Local Checkpoints (Hundreds of MB / GB)
+# ------------------------------------------------------------------------------
+hf_cache/
+checkpoints/
+.cache/
+models/
+weights/
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.onnx
+
+# ------------------------------------------------------------------------------
+# 4. Virtual Environments & Packages
+# ------------------------------------------------------------------------------
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ------------------------------------------------------------------------------
+# 5. Python Bytecode, Caches & Testing
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.nox/
+.tox/
+
+# ------------------------------------------------------------------------------
+# 6. Logs, Process Files & Temp
+# ------------------------------------------------------------------------------
+*.log
+logs/
+indicspeak.log
+*.pid
+tmp/
+/tmp/
+
+# ------------------------------------------------------------------------------
+# 7. OS & Editor Specific Files
+# ------------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
